@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens.
+ *
+ * Every colour used by `shared/ui` resolves through one of these, so the whole
+ * app re-themes from this block alone. Defined as raw custom properties first,
+ * then exposed to Tailwind via `@theme inline` — that indirection is what lets
+ * the dark scheme override them without regenerating utility classes.
+ */
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
+
+  /* Panels stacked on the background: sidebar, chat header, composer. */
+  --surface: #ffffff;
+  --surface-raised: #f8fafc;
+  --surface-hover: #f1f5f9;
+
+  --border: #e2e8f0;
+  --muted: #64748b;
+
+  --accent: #10715c;
+  --accent-foreground: #f0fdf9;
+  --accent-soft: #d6f2ea;
+
+  --danger: #dc2626;
+  --success: #16a34a;
+
+  /* Message bubbles — the one place the two sides must be unmistakable. */
+  --bubble-outgoing: #d6f2ea;
+  --bubble-outgoing-foreground: #0b3b31;
+  --bubble-incoming: #f1f5f9;
+  --bubble-incoming-foreground: #111827;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b1117;
+    --foreground: #e8eef5;
+
+    --surface: #111a22;
+    --surface-raised: #16212b;
+    --surface-hover: #1d2b37;
+
+    --border: #24333f;
+    --muted: #8ba0b2;
+
+    --accent: #2aa88a;
+    --accent-foreground: #04201a;
+    --accent-soft: #16302a;
+
+    --danger: #f87171;
+    --success: #4ade80;
+
+    --bubble-outgoing: #1c4d42;
+    --bubble-outgoing-foreground: #d7f2e9;
+    --bubble-incoming: #1b2732;
+    --bubble-incoming-foreground: #e8eef5;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
+  --color-bubble-outgoing: var(--bubble-outgoing);
+  --color-bubble-outgoing-foreground: var(--bubble-outgoing-foreground);
+  --color-bubble-incoming: var(--bubble-incoming);
+  --color-bubble-incoming-foreground: var(--bubble-incoming-foreground);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* The message list scrolls constantly; a thin scrollbar keeps it unobtrusive. */
+@supports (scrollbar-width: thin) {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
