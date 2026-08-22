@@ -24,6 +24,23 @@ Both parts ship from a single deployment: `/` is the landing page, `/login` and
 
 ---
 
+## What's implemented
+
+| Requirement | Where |
+|---|---|
+| Login / implicit registration by phone + name | `/login` |
+| Start a conversation by searching name or number | Sidebar → new conversation |
+| Group conversations with multiple participants | Sidebar → new group |
+| Group management — rename, add, remove, promote, leave | Group chat header → Manage |
+| Message history, sender/receiver distinguished, timestamped | `/chat/[id]` |
+| Sending messages, empty and whitespace-only blocked | Composer |
+| Real-time incoming messages, no refresh | Socket.IO, merged into the query cache |
+| Loading, empty and error states | Throughout — skeletons, `EmptyState`, `ErrorState` |
+| Auto-scroll that doesn't hijack the reader | `use-stick-to-bottom.ts` |
+| Landing page | `/` |
+
+---
+
 ## Tech stack
 
 | Concern | Choice |
@@ -303,17 +320,13 @@ Honestly ordered by what I think matters most:
    scroll-anchoring hook and the message-cache merge — both are stateful,
    full of edge cases, and exactly the kind of logic that regresses silently.
    Playwright for the login → send → receive path, unit tests for the merge.
-2. **Group management UI.** The API layer and hooks for rename, add member,
-   remove member, promote admin and leave are all written and typed, but only
-   group *creation* has an interface. This is the largest gap between what the
-   codebase supports and what a user can actually do.
-3. **Message list virtualisation.** Every loaded message is in the DOM. Fine for
+2. **Message list virtualisation.** Every loaded message is in the DOM. Fine for
    a demo conversation, not for a long thread.
-4. **An offline send queue.** Failed sends are retryable by hand; they should
+3. **An offline send queue.** Failed sends are retryable by hand; they should
    drain automatically on reconnect.
-5. **Unread counts and typing indicators** — both need API support that doesn't
+4. **Unread counts and typing indicators** — both need API support that doesn't
    currently exist (see the redesign section of the API docs).
-6. **A screen-reader pass.** Semantics, labels and focus states are in place and
+5. **A screen-reader pass.** Semantics, labels and focus states are in place and
    the dialog is built on the native element, but I have not driven the app with
    a screen reader, and I would not claim it is verified until I had.
 
