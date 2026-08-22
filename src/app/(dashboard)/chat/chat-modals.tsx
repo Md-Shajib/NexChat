@@ -1,7 +1,12 @@
 "use client";
 
-import { NewConversationModal, useConversationUiStore } from "@/features/conversation";
-import { CreateGroupModal } from "@/features/group-chat";
+import { useParams } from "next/navigation";
+
+import {
+  NewConversationModal,
+  useConversationUiStore,
+} from "@/features/conversation";
+import { CreateGroupModal, GroupDetailsModal } from "@/features/group-chat";
 
 /**
  * Route-level composition of the chat shell's dialogs.
@@ -14,6 +19,7 @@ import { CreateGroupModal } from "@/features/group-chat";
  * features. It holds no business logic — only wiring.
  */
 export function ChatModals() {
+  const params = useParams<{ conversationId?: string }>();
   const activeModal = useConversationUiStore((state) => state.activeModal);
   const closeModal = useConversationUiStore((state) => state.closeModal);
 
@@ -25,6 +31,11 @@ export function ChatModals() {
       />
       <CreateGroupModal
         isOpen={activeModal === "new-group"}
+        onClose={closeModal}
+      />
+      <GroupDetailsModal
+        conversationId={params?.conversationId ?? null}
+        isOpen={activeModal === "group-details"}
         onClose={closeModal}
       />
     </>

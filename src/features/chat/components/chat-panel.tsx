@@ -6,7 +6,7 @@ import { ROUTES } from "@/constants/routes";
 import { getConversationTitle } from "@/domains/conversation/conversation.utils";
 import type { ChatMessage } from "@/domains/message/message.types";
 import { useCurrentUser } from "@/features/auth";
-import { useConversation } from "@/features/conversation";
+import { useConversation, useConversationUiStore } from "@/features/conversation";
 import { EmptyState } from "@/shared/components/empty-state";
 import { ErrorState } from "@/shared/components/error-state";
 import { IconArrowLeft } from "@/shared/icons";
@@ -26,6 +26,7 @@ import { MessageList } from "./message-list";
  */
 export function ChatPanel({ conversationId }: { conversationId: string }) {
   const { data: currentUser } = useCurrentUser();
+  const openModal = useConversationUiStore((state) => state.openModal);
   const {
     conversation,
     isLoading: isConversationLoading,
@@ -81,6 +82,7 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
   }
 
   const title = getConversationTitle(conversation);
+  const isGroup = conversation.type === "group";
 
   const handleRetry = (message: ChatMessage) => {
     sendMessage.mutate({ conversationId, text: message.text });
@@ -99,19 +101,33 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
           <IconArrowLeft className="size-5" />
         </Link>
 
-        <Avatar
-          id={conversation.id}
-          name={title}
-          isGroup={conversation.type === "group"}
-        />
-        <div className="min-w-0">
-          <h1 className="truncate text-sm font-semibold">{title}</h1>
-          <p className="truncate text-xs text-muted">
-            {conversation.type === "group"
-              ? `${conversation.members.length} members`
-              : conversation.members[0]?.phone}
-          </p>
-        </div>
+        {isGroup ? (
+          // Groups get a manageable header; a direct chat has nothing to open,
+          // so it stays a plain heading rather than a button that does nothing.
+          <button
+            type="button"
+            onClick={() => openModal("group-details")}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-left transition-colors hover:bg-surface-hover"
+          >
+            <Avatar id={conversation.id} name={title} isGroup />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold">{title}</span>
+              <span className="block truncate text-xs text-muted">
+                {conversation.members.length} members · Manage
+              </span>
+            </span>
+          </button>
+        ) : (
+          <div className="flex min-w-0 flex-1 items-center gap-3 p-1">
+            <Avatar id={conversation.id} name={title} />
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-semibold">{title}</h1>
+              <p className="truncate text-xs text-muted">
+                {conversation.members[0]?.phone}
+              </p>
+            </div>
+          </div>
+        )}
       </header>
 
       <MessageList
