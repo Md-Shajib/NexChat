@@ -1,9 +1,9 @@
 # Next Chat
 
-A real-time one-to-one and group chat client built against the provided Chat API,
-plus a landing page introducing it.
+A real-time one-to-one and group chat client built on the provided Chat API, and
+a landing page to introduce it.
 
-Submission for the Frontend Developer take-home assignment.
+Submission for the Frontend Developer take-home.
 
 ---
 
@@ -14,13 +14,17 @@ Submission for the Frontend Developer take-home assignment.
 | **Part 1 — Chat application** | https://shajib-next-chat.netlify.app/login |
 | **Part 2 — Landing page** | https://shajib-next-chat.netlify.app/ |
 
-Both parts ship from a single deployment: `/` is the landing page, `/login` and
-`/chat` are the product.
+Both ship from one deployment. `/` is the landing page; `/login` and `/chat` are
+the product.
 
-> **Sign in with a phone number in international format** (e.g. `+8801700000000`)
-> and any name. There is no separate signup — an unrecognised number creates an
-> account. The API's database is shared and public, so you will see other
-> people's test accounts in search results.
+To sign in, enter a phone number in international format (`+8801700000000`) and
+any name. There's no separate signup — if the number isn't recognised, the API
+creates the account.
+
+One warning before you try it: the API's database is shared and public, and every
+candidate is writing to the same one. You'll see other people's test accounts in
+search results, and if you sign in with an obvious demo number, expect someone
+else to have used it too. Pick something unlikely.
 
 ---
 
@@ -39,6 +43,10 @@ Both parts ship from a single deployment: `/` is the landing page, `/login` and
 | Auto-scroll that doesn't hijack the reader | `use-stick-to-bottom.ts` |
 | Landing page | `/` |
 
+Group management goes past what the brief asked for (which was only *creating*
+groups). The API supports rename, add, remove, promote and leave, the hooks were
+already written, and leaving them unreachable felt worse than finishing them.
+
 ---
 
 ## Tech stack
@@ -56,8 +64,8 @@ Both parts ship from a single deployment: `/` is the landing page, `/login` and
 | Dates | date-fns |
 | Package manager | pnpm |
 
-No component library. The UI primitives in `src/shared/ui` are hand-rolled — see
-[Design decisions](#design-decisions-part-2).
+No component library — the primitives in `src/shared/ui` are hand-rolled. Reasons
+are in [Design decisions](#design-decisions-part-2).
 
 ---
 
@@ -68,8 +76,6 @@ pnpm install
 pnpm dev            # http://localhost:3000
 ```
 
-Other scripts:
-
 ```bash
 pnpm build          # production build
 pnpm start          # serve the production build
@@ -77,11 +83,11 @@ pnpm lint           # eslint, zero warnings tolerated
 pnpm typecheck      # tsc --noEmit
 ```
 
-Requires Node ≥ 20.9.
+Needs Node ≥ 20.9.
 
 ### Environment variables
 
-Copy `.env.example` to `.env.local` if you want to override the defaults:
+Copy `.env.example` to `.env.local` if you want to override anything:
 
 | Variable | Default | Notes |
 |---|---|---|
@@ -89,23 +95,25 @@ Copy `.env.example` to `.env.local` if you want to override the defaults:
 | `NEXT_PUBLIC_SOCKET_URL` | `https://frontend-task-chatapp.onrender.com` | Socket origin — the **host root**, not `/api` |
 | `NEXT_PUBLIC_API_TIMEOUT` | `30000` | The API is on a free dyno that cold-starts |
 
-Every variable has a working default, so the app builds and runs with no
-configuration. `src/config/env.ts` is the only module that reads `process.env`,
-and it validates with Zod at import time so a bad value fails loudly rather than
-surfacing later as a confusing network error.
+All three have working defaults, so it builds and runs with nothing configured —
+which is also why it deployed to Netlify without any environment setup.
+`src/config/env.ts` is the only file that touches `process.env`, and it validates
+with Zod at import time so a bad value fails immediately instead of turning up
+later as a confusing network error.
 
 ---
 
 ## API documentation
 
-The Part 1 documentation deliverable lives in
+The Part 1 deliverable is in
 **[`docs/api-documentation.md`](docs/api-documentation.md)**.
 
-It was written by exercising the live API rather than transcribing the provided
-Swagger page — the upstream spec is request-only and documents no response
-bodies or status codes, so every shape, status and error in that document was
-observed against the running deployment. It also contains a graded list of the
-bugs and inconsistencies I found, and a proposed redesign of the routes.
+I wrote it by exercising the live API rather than transcribing the Swagger page.
+The provided spec is request-only — it documents no response bodies and no status
+codes, and says so explicitly — so every shape, status and error in that document
+came from hitting the running deployment and writing down what came back. It also
+contains a graded list of the bugs I found and a proposed redesign of the routes,
+since the brief said renaming endpoints was fair game.
 
 ---
 
@@ -127,14 +135,13 @@ src/
 └── styles/        # design tokens + global CSS
 ```
 
-**Rules that are actually enforced in the code:**
+Four rules the code actually holds to:
 
 - Features talk to each other only through their `index.ts` barrels, never by
-  reaching into internals. The dependency graph is one-directional
-  (`group-chat → conversation`); where two features needed to be mounted
-  together, the composition lives at the route
-  (`app/(dashboard)/chat/chat-modals.tsx`) rather than making the barrels
-  circular.
+  reaching into internals. The dependency graph runs one way
+  (`group-chat → conversation`). Where two features had to be mounted together,
+  the composition sits at the route (`app/(dashboard)/chat/chat-modals.tsx`)
+  instead of making the barrels import each other.
 - No component calls Axios. Requests live in `features/*/api`, one file per
   endpoint.
 - `shared/` never imports from `features/`.
@@ -150,33 +157,36 @@ component → hook (React Query) → api fn → http() → axios
                                                     ApiError
 ```
 
-Two details worth calling out:
+Two things here mattered more than I expected.
 
-**Everything is validated at the boundary.** The API documents no response
-shapes at all, so each endpoint has a Zod schema and `lib/axios/request.ts`
-parses through it. A drift in the API becomes a located, named error instead of
-an `undefined` three components deep. The same schemas parse the **socket**
-payloads, so the REST and real-time paths cannot diverge.
+**Everything is validated at the boundary.** Because the API documents no
+response shapes, each endpoint has a Zod schema and `lib/axios/request.ts` parses
+through it. When the API drifts, you get a named error pointing at the field
+instead of an `undefined` surfacing three components away. The same schemas parse
+the socket payloads, so the REST and real-time paths can't quietly diverge —
+which turned out to matter, because both write into the same cache.
 
-**One error type crosses the boundary.** Axios errors are normalised into
-`ApiError` by an interceptor, so nothing above the API layer knows Axios exists.
-`ApiError` exposes `isUnauthorized`, `isValidation`, `isRetryable` and
-`fieldErrors`, which is what lets React Query's retry policy and the shared
-`ErrorState` component behave sensibly without inspecting HTTP internals.
+**One error type crosses the boundary.** An interceptor normalises Axios errors
+into `ApiError`, so nothing above the API layer knows Axios exists. `ApiError`
+exposes `isUnauthorized`, `isValidation`, `isRetryable` and `fieldErrors`, and
+that's what lets the retry policy and the shared `ErrorState` behave sensibly
+without either of them poking at HTTP internals. It also gave me somewhere
+sensible to hide the API's habit of returning 400 where it means 401.
 
 ### Real-time
 
-A single socket is opened for the whole `/chat` segment. Incoming
-`message:new` events are parsed and merged into the React Query cache; nothing
-below the shell knows a socket exists — components just re-render from cache.
+One socket for the whole `/chat` segment. Incoming `message:new` events are
+parsed and merged into the React Query cache, and nothing below the shell knows a
+socket exists — components just re-render from cache.
 
-Sends go over **REST**, not the socket, because the REST call gives a definitive
-success/failure to hang optimistic UI on. The server echoes every message back
-over `message:new` *including to the sender*, so all three write paths
-(optimistic insert, REST response, socket echo) funnel through one merge
-function in `features/chat/services/message-cache.service.ts` that keys on
-message id and a client-generated correlation id. Without that, the sender sees
-every message twice.
+Sends go over REST rather than the socket, because the REST call gives a
+definite success or failure to hang optimistic UI on. The catch is that the
+server echoes every message back over `message:new` *including to the sender*,
+so there are three separate paths writing the same message into the cache: the
+optimistic insert, the REST response, and the socket echo. They all funnel
+through one merge function in
+`features/chat/services/message-cache.service.ts`, keyed on message id plus a
+client-generated correlation id. Without that, you see everything you send twice.
 
 ---
 
@@ -185,209 +195,260 @@ every message twice.
 ## Architecture and library decisions
 
 **Feature-sliced over layer-first.** A `components/ hooks/ services/` split
-scales with file *type*, not with the product. Grouping by feature means the
-chat panel's API calls, hooks, schemas and components sit together, and the
-blast radius of a change is a directory. The trade-off is more ceremony up
-front — barrels, more folders, occasional "where does this go" decisions — which
-only pays off if the project grows. For a 24-hour task it is arguably over-built;
-I went with it because the brief explicitly asks to treat this as production
-code, and because it made the feature boundaries obvious enough to keep the
-codebase navigable while moving fast.
+scales with file type rather than with the product. Grouping by feature keeps the
+chat panel's API calls, hooks, schemas and components together, so the blast
+radius of a change is one directory. The cost is ceremony — barrels, more
+folders, the occasional "where does this belong" pause — and that only pays off
+if the thing grows. For a 24-hour exercise it's arguably over-built. I went with
+it because the brief asked for production code, and because clear boundaries are
+what let me move fast later without breaking things I'd already finished.
 
 **TanStack Query for server state, Zustand only for UI state.** Messages,
-conversations and the current user are server-owned and benefit from caching,
-deduplication, background refetch and an infinite-query cursor. Zustand holds
-only things the server has no opinion about: which modal is open, the sidebar
-filter, the session token.
+conversations and the current user are server-owned and get real value from
+caching, deduplication and the infinite-query cursor. Zustand holds only what the
+server has no opinion about: which modal is open, the sidebar filter, the token.
 
-The token is the one deliberate exception to "Zustand is UI-only". It is
-client-owned, needs to be read *synchronously* by the Axios interceptor before
-any React tree exists, and modelling it as server state would mean every request
-waiting on a query to settle. The cached user object in the store is a
-first-paint optimisation only — `GET /auth/me` remains the source of truth, and
-the store is corrected from it on every load.
+The token is a deliberate exception to "Zustand is UI-only". It's client-owned
+and the Axios interceptor needs to read it *synchronously*, before any React tree
+exists. Modelling it as server state would mean every request waiting on a query
+to settle. The cached user next to it is only a first-paint optimisation —
+`/auth/me` stays the source of truth, and the store gets corrected from it.
 
-**Zod everywhere, not just on forms.** Given an API with no documented response
-shapes, schemas at the boundary were the cheapest way to make an undocumented
-contract explicit and self-checking.
+**Zod everywhere, not just on forms.** With an API that documents no response
+shapes, schemas at the boundary were the cheapest way to turn an undocumented
+contract into something explicit and self-checking.
 
-**No component library.** shadcn/ui was in my original plan and I dropped it.
-The brief asks for a distinctive visual result, and shadcn's defaults are
-recognisable on sight; I would have spent the time overriding it. The primitives
-actually needed here are few — button, input, avatar, modal, skeleton, spinner —
-and hand-rolling them meant the dialog could be built on the native `<dialog>`
-element, which gets focus trapping, focus restore, Escape handling, background
-inertness and top-layer stacking correct by construction rather than by
-re-implementation.
+**No component library.** shadcn/ui was in my original plan and I dropped it. The
+brief asks for a distinctive result, shadcn's defaults are recognisable on sight,
+and I'd have spent the time overriding them. The primitives actually needed here
+are few — button, input, avatar, modal, skeleton, spinner. Hand-rolling them also
+meant the dialog could be built on the native `<dialog>` element, which gets
+focus trapping, focus restore, Escape, background inertness and top-layer
+stacking right by construction instead of by reimplementation.
 
 **Client-side auth guard rather than middleware.** The JWT lives in
-`localStorage`, which middleware cannot read. The guard therefore runs in the
-browser and, crucially, waits for the store to hydrate before deciding —
-redirecting on an unhydrated store would bounce every authenticated user to
-`/login` on a hard refresh. The trade-off is a brief loading state on first
-paint. A cookie-based session would allow a server-side redirect, but the API
-issues a bearer token and I did not want to invent a session layer around it.
+`localStorage`, which middleware can't read, so the guard runs in the browser.
+The important part is that it waits for the store to hydrate before deciding —
+redirecting on an unhydrated store bounces every logged-in user to `/login` on a
+hard refresh, which is the kind of bug that only shows up after you've stopped
+looking for it. The cost is a brief loading state on first paint. A cookie
+session would allow a server-side redirect, but the API issues a bearer token and
+I didn't want to invent a session layer around it.
 
 ### The chat panel
 
-The brief says this is where it will be looked at closest, so:
+The brief says this is where you'll look closest, so it got the most attention.
 
-- **Scroll anchoring** (`shared/hooks/use-stick-to-bottom.ts`) tracks whether
-  the user is pinned to the bottom. New messages auto-scroll only while pinned;
-  otherwise they increment a counter behind a "N new messages" pill. Sending
-  your own message always scrolls, because that is an explicit intent to be at
-  the bottom. Loading older messages captures and restores scroll offset, so
-  prepending history doesn't shove the text you're reading up the screen.
-- **Optimistic sends** render instantly as `sending`, get patched to `sent` when
-  the server responds, and are marked `failed` — retryable, with the text
-  preserved — if it doesn't.
-- **Empty messages** are blocked in the composer's Zod schema (`.trim()` before
-  `.min(1)`) *and* again in the send mutation. The API accepts `""` and returns
-  200, so the client is the only guard.
-- **Enter sends, Shift+Enter newlines**, and the handler ignores `isComposing`
-  so IME input isn't committed half-typed.
+**Scroll anchoring** lives in `shared/hooks/use-stick-to-bottom.ts`. It tracks
+whether the reader is pinned to the bottom; new messages auto-scroll only while
+that holds, and otherwise increment a counter behind a "N new messages" pill.
+Sending your own message always scrolls, because hitting enter is an explicit
+statement that you want to be at the bottom. Loading older messages captures the
+scroll offset and restores it afterwards, so prepending history doesn't shove the
+paragraph you're reading up off the screen.
+
+**Optimistic sends** appear instantly as `sending`, get patched to `sent` when
+the server answers, and are marked `failed` if it doesn't — retryable, with the
+text preserved, because losing what someone typed is unforgivable.
+
+**Empty messages** are blocked in the composer's Zod schema (`.trim()` before
+`.min(1)`) and again in the send mutation. The API accepts `""` and returns 200,
+so the client is the only thing standing between a user and an empty bubble.
+
+**Enter sends, Shift+Enter makes a newline**, and the key handler ignores
+`isComposing` so IME input doesn't get committed half-typed.
+
+### The Part 1 bonus
+
+If one thing counts here, I'd point at the search fix. Searching by phone number
+in international format — the exact flow the brief describes — returns a 500 from
+the API, because the query string is dropped into a MongoDB `$regex` unescaped
+and a leading `+` isn't a valid regex. So `src/shared/utils/escape-regexp.ts`
+escapes metacharacters before the request goes out, and the API layer refuses an
+empty query rather than letting `q=` dump the entire user table.
+
+I want to be straight about how far that gets, though: escaping turns a crash
+into a graceful empty state, but it doesn't make E.164 numbers findable, because
+the API matches phones by exact equality and the escaped string is no longer
+equal to the stored one. Both behaviours are documented in the API doc. It's a
+real fix for a real crash, not a fix for the underlying feature.
 
 ## Design decisions (Part 2)
 
-The visual direction is deliberately quiet: a near-neutral surface palette with
-a single desaturated green accent, generous type, and almost no chrome. Chat
-clients are read for hours, and a landing page that promises a calm reading
-surface should look like one. Colour is used to carry meaning — the accent marks
-actions and outgoing messages, and nothing else competes for it.
+The visual direction is deliberately quiet — a near-neutral surface palette, one
+desaturated green accent, generous type, almost no chrome. People read chat
+clients for hours, and a page promising a calm reading surface ought to look like
+one. Colour carries meaning rather than decoration: the accent marks actions and
+outgoing messages, and nothing else competes with it.
 
-Everything is driven by CSS custom properties in `src/styles/globals.css` and
-exposed to Tailwind via `@theme inline`. Light and dark are one token swap, and
-because the landing page and the product share the token set, the in-page demo
-looks like the real thing because it *is* the real thing.
+It's all driven by CSS custom properties in `src/styles/globals.css`, exposed to
+Tailwind through `@theme inline`. Light and dark are one token swap. Because the
+landing page and the product share the same tokens, the demo in the hero looks
+like the real thing — mostly because it *is* the real thing.
 
-**The bonus attempt.** The brief warns that a generic addition won't count, so
-rather than a feature card claiming good scroll behaviour, the hero mockup is a
+**The bonus.** The brief warns that a generic addition won't count, so instead of
+a feature card asserting that the scroll behaviour is good, the hero mockup is a
 working chat panel running `useStickToBottom` — the same hook the real message
-list uses. Messages stream in; scroll up mid-stream and your position holds
-while a counter collects what arrived; tap it to return. The composer refuses
-whitespace exactly as the real one does. The page's central claim is falsifiable
-in the same viewport that makes it, and because the demo shares the production
-hook, a regression there breaks the demo too.
+list uses, not a copy of it. Messages stream in on a timer; scroll up mid-stream
+and your position holds while a counter collects what arrived; tap the pill to
+come back. The composer refuses whitespace exactly like the real one. The page's
+central claim is testable in the same viewport that makes it, and because the
+demo shares the production hook, breaking the behaviour breaks the demo too.
 
-Illustrations are custom SVG drawn for the sections they sit in — a fan-out for
-real-time delivery, a held viewport with messages queueing below it for scroll
-anchoring, intersecting member circles for groups. They use `currentColor` so
-they re-theme with the page, and the animated pulses sit behind
+The illustrations are custom SVG drawn for the sections they sit in — a fan-out
+for real-time delivery, a held viewport with messages queueing underneath for
+scroll anchoring, intersecting circles of members for groups. They use
+`currentColor` so they re-theme with the page, and the animated pulses sit behind
 `motion-reduce:hidden`.
 
 ## How I used AI
 
-> Adjust this section to match your own account of the work before submitting.
+I used **Claude Code** (Claude Opus) throughout, and it's fair to say it did a
+lot of the typing. Where it earned its place:
 
-This project was built with **Claude Code** (Claude Opus). What it was used for:
+**Probing the API** was easily the most valuable use. I had it write throwaway
+Node scripts that hit every endpoint against the live deployment — happy paths,
+permission boundaries, malformed input, pagination edges, and deliberately silly
+inputs — and then wrote the documentation from what actually came back rather
+than from the Swagger page. The regex injection, the inclusive cursor and the
+exact-match phone search all came out of that, and I don't think I'd have found
+any of them by reading the spec.
 
-- **Probing the API.** The most valuable use by far. I had it write throwaway
-  Node scripts that exercised every endpoint against the live deployment —
-  happy paths, permission boundaries, malformed input, pagination edges — and
-  the entire API documentation was written from those observations rather than
-  from the Swagger page. Several findings below would not have surfaced any
-  other way.
-- **Drafting** the API documentation, this README, and the domain schemas.
-- **Scaffolding** the architecture and the repetitive parts: one file per
-  endpoint, barrels, Zod schemas, the icon set.
+**Drafting** the API documentation and this README, and **scaffolding** the
+repetitive parts: one file per endpoint, barrels, Zod schemas, the icon set.
 
-What was corrected or rejected:
+What I changed, rejected, or had to go back and fix:
 
-- **A wrong finding in the first draft of the API docs.** An early probe
-  suggested `POST /auth/login` echoed a submitted name without persisting it. It
-  turned out the shared public database had another candidate logging into the
-  same demo phone number between my two calls. Re-probing with unique numbers
-  disproved it, and both the document and the code comment that had been written
-  around it were corrected. Worth stating plainly: the first confident
-  explanation was wrong, and only re-testing caught it.
-- **Two ESLint `react-hooks/set-state-in-effect` errors.** The tempting fix is
-  a disable comment. Instead the socket status moved to `useSyncExternalStore`
-  over the socket client — the socket is an external system that already holds
-  the truth, so React should subscribe to it rather than mirror it — and the
-  composer's per-conversation draft reset became a `key` prop, which is React's
-  own idiom for it. Both are better than what was there before the linter
-  complained.
-- **A circular dependency between two feature barrels**, introduced when the
-  modal composition was first placed inside the `conversation` feature. Moved to
-  the route.
-- **shadcn/ui**, dropped as described above.
+**The first version of the API docs contained a confident, wrong finding.** An
+early probe suggested `POST /auth/login` echoed the submitted name without
+persisting it. What had actually happened was that another candidate logged into
+the same demo phone number in between my two requests — the database is shared.
+Re-probing with unique numbers disproved it, and I corrected both the document
+and the code comment that had been written around it. The lesson I'd draw is that
+the tool is confident either way, and only re-testing tells you which.
+
+**Two `react-hooks/set-state-in-effect` errors**, where the obvious move is a
+disable comment. Instead the socket status moved to `useSyncExternalStore` over
+the socket client — the socket is an external system that already holds the
+truth, so React should subscribe to it rather than mirror it into state — and the
+composer's per-conversation draft reset became a `key` prop, which is React's own
+idiom. Both ended up better than what the linter complained about.
+
+**A stale-name bug I only found by using the app.** The header showed one name
+and the group member list showed another. The cached user was being passed as
+React Query's `initialData`, which is treated as freshly fetched, so with a
+five-minute `staleTime` it never revalidated — while conversation member lists
+came back fresh from the server. Switching to `placeholderData` fixed it, since
+that paints immediately and still fetches. Nothing in the type system or the
+linter would have caught it.
+
+**A circular dependency between two feature barrels**, created when I first put
+the modal composition inside the `conversation` feature. Moved to the route.
+
+**shadcn/ui**, dropped for the reasons above.
+
+## Assumptions I made
+
+The brief said to make reasonable assumptions and note them, so:
+
+- **Phone numbers are normalised to E.164 client-side before login.** The API
+  stores whatever you send, verbatim, so `0170…`, `880170…` and `+880170…` become
+  three different accounts for one person. Normalising is the only way to stop a
+  user accidentally creating a duplicate by typing their own number differently.
+- **`/auth/me` is authoritative for the display name**, not the login response
+  and not the cached copy — because the shared database means the name can change
+  underneath you.
+- **Both parts ship from one deployment.** The brief asks for two links; a single
+  Next app serving `/` and `/chat` seemed more honest than two projects sharing a
+  codebase.
+- **Sends go over REST, not the socket.** Both work. REST gives a clearer
+  success/failure signal for optimistic UI.
+- **A group needs three people**, because the API enforces it, so the UI says so
+  up front rather than letting you submit and get rejected.
 
 ## What I'd do with more time
 
-Honestly ordered by what I think matters most:
+Roughly in the order I think matters:
 
 1. **Tests.** There are none, and the two places that most need them are the
-   scroll-anchoring hook and the message-cache merge — both are stateful,
-   full of edge cases, and exactly the kind of logic that regresses silently.
-   Playwright for the login → send → receive path, unit tests for the merge.
-2. **Message list virtualisation.** Every loaded message is in the DOM. Fine for
-   a demo conversation, not for a long thread.
+   scroll-anchoring hook and the message-cache merge — both stateful, both full
+   of edge cases, both exactly the sort of thing that regresses without anyone
+   noticing. Playwright for login → send → receive, unit tests for the merge.
+2. **Virtualise the message list.** Every loaded message is in the DOM. Fine for
+   a demo conversation, not for a real thread.
 3. **An offline send queue.** Failed sends are retryable by hand; they should
-   drain automatically on reconnect.
-4. **Unread counts and typing indicators** — both need API support that doesn't
-   currently exist (see the redesign section of the API docs).
-5. **A screen-reader pass.** Semantics, labels and focus states are in place and
-   the dialog is built on the native element, but I have not driven the app with
-   a screen reader, and I would not claim it is verified until I had.
+   drain by themselves on reconnect.
+4. **Unread counts and typing indicators.** Both need API support that doesn't
+   exist yet — see the redesign section of the API doc.
+5. **A proper screen-reader pass.** The semantics, labels and focus states are
+   there and the dialog is built on the native element, but I haven't driven the
+   app with a screen reader, and I won't claim it's verified until I have.
 
 ---
 
 ## Issues I ran into with the API
 
-Full detail, with reproductions and severity, is in
+Full detail, with reproductions, is in
 [`docs/api-documentation.md` §8](docs/api-documentation.md#8-findings--bugs--inconsistencies).
-The ones that changed how the client is built:
+These are the ones that changed how the client is built.
 
-**1. `/users/search?q=` is a regex injection.** The query string is interpolated
-into a MongoDB `$regex` unescaped. Searching for a phone number in international
-format — i.e. typing the `+` that the login screen asks for — returns **500**
+**1. `/users/search?q=` is a regex injection.** The query goes into a MongoDB
+`$regex` unescaped. Searching a phone number in international format — typing the
+`+` that the login screen asks for — returns **500**
 (`quantifier does not follow a repeatable item`). `(` and `[` fail the same way,
-and `q=.*` returns **every user in the database**. This breaks the assignment's
-own stated flow ("the user searches by a number or name").
-*Worked around* by escaping regex metacharacters in the API layer before the
-request, and refusing an empty `q`. The real fix is server-side.
+and `q=.*` returns every user in the database. This breaks the brief's own stated
+flow. *Worked around* by escaping metacharacters before the request and refusing
+an empty `q`.
 
-**2. The `before` pagination cursor is inclusive.** Requesting
-`?before=<id>` returns that message *again* as the first item of the next page,
-so naive pagination duplicates one message at every page boundary.
-*Worked around* by de-duplicating on id when merging pages.
+**2. Search doesn't match the way you'd expect, and E.164 numbers are
+unfindable.** `name` is prefix-anchored, `phone` is exact whole-string equality —
+so `q=559020` won't find the phone `5590204983`. Combined with (1), a number
+stored as `+8801712345678` can't be found at all: raw returns 500, escaped
+returns zero hits because the escaped string is no longer equal, and dropping the
+`+` doesn't match either. There's no client-side fix; searching by name works.
 
-**3. Empty and whitespace-only messages are accepted with a 200.** The brief
-requires they not be sendable; the API will happily persist them, and other
-candidates' blank messages are visible in the shared database.
-*Worked around* by validating client-side in two places.
+**3. The `before` pagination cursor is inclusive.** `?before=<id>` returns that
+same message again as the first item of the next page, so naive pagination
+duplicates one message at every boundary. *Worked around* by de-duplicating on id
+when merging pages.
 
-**4. Starting a conversation with yourself returns someone else's conversation.**
-`POST /conversations { userId: <your own id> }` responds 200 with an unrelated
-existing conversation rather than rejecting.
-*Worked around* by filtering the current user out of search results.
+**4. Empty and whitespace-only messages are accepted with a 200.** The brief
+requires they not be sendable; the API persists them happily, and you can see
+other candidates' blank messages in the shared database. *Worked around* by
+validating client-side in two places.
 
-**5. A missing token is `400 NO_TOKEN`, not `401`.** An invalid token *is* 401.
-Any client keying "session expired" off the status alone silently ignores the
+**5. Starting a conversation with yourself returns someone else's conversation.**
+`POST /conversations { userId: <your own id> }` answers 200 with an unrelated
+existing conversation instead of rejecting. *Worked around* by filtering the
+current user out of search results.
+
+**6. A missing token is `400 NO_TOKEN`, not `401`.** An invalid token *is* 401.
+Any client keying "session expired" off the status alone silently misses the
 first case. *Worked around* by matching on error code as well as status.
 
-**6. Malformed ObjectIds return `500` with raw Mongoose text** — e.g.
+**7. Malformed ObjectIds return `500` with raw Mongoose text** — e.g.
 `Cast to ObjectId failed for value "nope" ... for model "User"` — leaking the
-ORM, model names and schema paths. Should be a 400 or 404.
-*Worked around* by never showing a 5xx message to the user.
+ORM, the model names and the schema paths. Should be a 400 or a 404. *Worked
+around* by never showing a 5xx message to the user.
 
-**7. Four different response envelopes** across the API: bare object, bare
-array, `{ data: [] }`, and `{ messages: [], hasMore }`, with no rule connecting
-shape to endpoint. The two conversation-creation endpoints disagree with each
-other on both status code (200 vs 201) and response shape (thin stub vs fully
-hydrated object).
-*Worked around* by unwrapping and normalising per-endpoint at the API boundary.
+**8. Four different response envelopes**: bare object, bare array,
+`{ data: [] }`, and `{ messages: [], hasMore }`, with no rule connecting shape to
+endpoint. The two conversation-creation endpoints disagree with each other on
+both status code (200 vs 201) and response shape (thin stub vs fully hydrated).
+*Worked around* by unwrapping and normalising per endpoint at the boundary.
 
-**8. Smaller things:** `limit` is unvalidated and uncapped (`0`, `-1` and `9999`
-all return the entire history); `lastMessage` is `{}` rather than `null` when
-empty; direct conversations expose `participant` (singular, excluding you) while
-groups expose `participants` (plural, including you); `error.code` is usually a
-string but is sometimes a number; there is no `GET /conversations/:id`, so a
-deep link must fetch the whole list to resolve one row; and `/health` is
-documented under `/api` but actually served from the host root.
+**9. Smaller things.** `limit` is unvalidated and uncapped — `0`, `-1` and `9999`
+all return the entire history. `lastMessage` is `{}` rather than `null` when
+empty. Direct conversations expose `participant` (singular, excluding you) while
+groups expose `participants` (plural, including you). `error.code` is usually a
+string but is sometimes a number. There's no `GET /conversations/:id`, so a deep
+link has to fetch the whole list to resolve one row. And `/health` is documented
+under `/api` but actually served from the host root.
 
-One non-bug worth flagging for anyone testing this: **the API's database is
-shared, public and unseeded.** Any candidate can read and write it. Well-known
-demo numbers are actively in use by other people, so an account's name can
-change under you mid-session — which is exactly what produced the incorrect
-finding described in the AI section above.
+Finally, one thing that isn't a bug but caught me out badly enough to be worth
+saying: **the database is shared, public and unseeded.** Every candidate reads and
+writes the same data. Obvious demo numbers are in active use by other people, and
+since login rewrites the account name on every call, your own account can be
+renamed underneath you mid-session. That's what produced the incorrect finding I
+described above, and later it renamed my own test account. If you're testing
+this, use a phone number nobody else would guess.
