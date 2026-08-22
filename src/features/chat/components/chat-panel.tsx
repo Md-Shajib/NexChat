@@ -1,11 +1,15 @@
 "use client";
 
+import Link from "next/link";
+
+import { ROUTES } from "@/constants/routes";
 import { getConversationTitle } from "@/domains/conversation/conversation.utils";
 import type { ChatMessage } from "@/domains/message/message.types";
 import { useCurrentUser } from "@/features/auth";
 import { useConversation } from "@/features/conversation";
 import { EmptyState } from "@/shared/components/empty-state";
 import { ErrorState } from "@/shared/components/error-state";
+import { IconArrowLeft } from "@/shared/icons";
 import { Avatar } from "@/shared/ui/avatar";
 import { Skeleton } from "@/shared/ui/skeleton";
 
@@ -85,6 +89,16 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
   return (
     <section className="flex min-h-0 flex-1 flex-col bg-background">
       <header className="flex items-center gap-3 border-b border-border bg-surface p-3">
+        {/* Mobile is a two-screen flow, so the panel needs an explicit way
+            back to the list. Hidden from md up, where both are on screen. */}
+        <Link
+          href={ROUTES.chat}
+          aria-label="Back to conversations"
+          className="-ml-1 rounded-lg p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-foreground md:hidden"
+        >
+          <IconArrowLeft className="size-5" />
+        </Link>
+
         <Avatar
           id={conversation.id}
           name={title}

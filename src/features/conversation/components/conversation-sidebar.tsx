@@ -10,6 +10,7 @@ import { IconSearch } from "@/shared/icons";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Input } from "@/shared/ui/input";
+import { cn } from "@/shared/utils/cn";
 
 import { useConversations } from "../hooks/use-conversations";
 import { useConversationUiStore } from "../store/conversation-ui.store";
@@ -41,7 +42,15 @@ export function ConversationSidebar() {
   }, [data, listFilter]);
 
   return (
-    <aside className="flex w-full flex-col border-border bg-surface md:w-80 md:border-r">
+    <aside
+      className={cn(
+        "w-full flex-col border-border bg-surface md:flex md:w-80 md:shrink-0 md:border-r",
+        // Mobile is a two-screen flow: the list *is* the /chat screen, and
+        // opening a conversation replaces it rather than stacking beneath it.
+        // From md up both panes are visible side by side.
+        activeId ? "hidden" : "flex",
+      )}
+    >
       <SidebarHeader />
 
       <div className="border-b border-border p-3">

@@ -25,16 +25,20 @@ export function ChatSocketBoundary({ children }: { children: ReactNode }) {
       : null;
 
   return (
-    <>
+    // The chat segment is pinned to the viewport rather than growing with its
+    // content: the message list scrolls internally, and `h-full` on that
+    // scroller only resolves if every ancestor has a definite height. `dvh`
+    // (not `vh`) so the mobile URL bar collapsing doesn't clip the composer.
+    <div className="flex h-dvh flex-col overflow-hidden">
       {banner ? (
         <p
           role="status"
-          className="bg-surface-raised px-4 py-1.5 text-center text-xs text-muted"
+          className="shrink-0 bg-surface-raised px-4 py-1.5 text-center text-xs text-muted"
         >
           {banner}
         </p>
       ) : null}
       {children}
-    </>
+    </div>
   );
 }
