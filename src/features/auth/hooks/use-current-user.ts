@@ -14,8 +14,20 @@ import { selectToken, useAuthStore } from "../store/auth.store";
  *
  * Also the token validity check: if the stored JWT has expired, this query
  * fails with an unauthorized error and the Axios interceptor tears the session
- * down. The cached user from localStorage is used as `initialData` so the shell
- * paints immediately instead of flashing a loading state on every reload.
+ * down.
+ *
+ * The localStorage copy is passed as `placeholderData`, NOT `initialData`.
+ * That distinction matters: `initialData` is written into the cache and treated
+ * as freshly fetched, so with a non-zero `staleTime` the query would not
+ * revalidate on mount and a stale name could persist for the whole session.
+ * `placeholderData` paints instantly *and* always fetches.
+ *
+ * This is not hypothetical. The API's database is shared and public, and
+ * `POST /auth/login` rewrites the account name on every call, so another client
+ * can rename the account behind a phone number at any time. With `initialData`
+ * the header kept rendering the name captured at login while conversation
+ * member lists — which come fresh from `GET /conversations` — showed the
+ * server's current name. Same account, two sources, one of them stale.
  */
 export function useCurrentUser() {
   const token = useAuthStore(selectToken);
@@ -26,7 +38,7 @@ export function useCurrentUser() {
     queryKey: queryKeys.auth.me(),
     queryFn: getCurrentUser,
     enabled: token !== null,
-    initialData: cachedUser ?? undefined,
+    placeholderData: cachedUser ?? undefined,
     staleTime: 5 * 60_000,
   });
 

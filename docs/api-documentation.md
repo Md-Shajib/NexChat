@@ -266,9 +266,15 @@ Both fields are required and must be non-empty strings.
 [{ "_id": "…", "name": "ashik", "phone": "01793452836" }]
 ```
 
-Matching is a case-insensitive substring across name and phone. There is no
-pagination and no cap — a short `q` returns a very large list. The caller is
-included in the results.
+Matching is **not** a substring search, and the two fields behave differently:
+
+| Field | Semantics | Evidence |
+|---|---|---|
+| `name` | **Prefix**, regex-anchored | user `Zzq Diagnostic`: `q=Zzq` → hit, `q=zq` → 0 |
+| `phone` | **Exact, whole-string equality** | phone `5590204983`: `q=5590204983` → hit, `q=559020` → 0, `q=90204983` → 0 |
+
+There is no pagination and no cap — a short `q` returns a very large list. The
+caller is included in the results.
 
 > 🔴 **`q` is interpolated into a MongoDB `$regex` without escaping.** This is
 > the most serious bug in the API and it breaks the assignment's own use case.
@@ -288,6 +294,22 @@ included in the results.
 >
 > **Client workaround:** escape regex metacharacters before sending, and treat
 > an empty `q` as "don't query". See §8.1.
+
+> 🔴 **A phone number stored with a leading `+` cannot be found at all.**
+> The two bugs above compound into a dead end:
+>
+> | Query for the existing account `+8801712345678` | Result |
+> |---|---|
+> | `+8801712345678` (raw) | **500** — the `+` fails to compile as a regex |
+> | `\+8801712345678` (escaped) | **200, 0 hits** — phone is matched by *equality*, and the escaped string is no longer equal |
+> | `8801712345678` / `880171` (no `+`) | **0 hits** — not equal to the stored value |
+>
+> Escaping is still the right client behaviour — a graceful empty state beats a
+> 500 — but it converts a crash into a miss rather than into a result. Accounts
+> whose phone was stored *without* a `+` are found normally by exact match, so
+> the failure is specific to E.164-formatted records. There is no client-side
+> fix; the endpoint needs to escape its own input and match phones by
+> normalised substring.
 
 ---
 

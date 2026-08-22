@@ -11,8 +11,8 @@ Submission for the Frontend Developer take-home assignment.
 
 | | URL |
 |---|---|
-| **Part 1 — Chat application** | `<add your Vercel URL>/login` |
-| **Part 2 — Landing page** | `<add your Vercel URL>/` |
+| **Part 1 — Chat application** | https://shajib-next-chat.netlify.app/login |
+| **Part 2 — Landing page** | https://shajib-next-chat.netlify.app/ |
 
 Both parts ship from a single deployment: `/` is the landing page, `/login` and
 `/chat` are the product.
