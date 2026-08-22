@@ -1,37 +1,37 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 
 import { appConfig } from "@/config/app-config";
-import { ROUTES } from "@/constants/routes";
+import {
+  ClosingCta,
+  FeatureShowcase,
+  Hero,
+  MarketingNav,
+  SiteFooter,
+} from "@/features/marketing";
+
+export const metadata: Metadata = {
+  title: `${appConfig.name} — messaging that respects where you're reading`,
+  description:
+    "A real-time chat client with scroll anchoring, group conversations, and no signup step. Try the live demo in the page.",
+};
 
 /**
  * Landing page (assignment Part 2).
  *
- * Placeholder for now — the creative page is built on top of this route so the
- * marketing surface and the product share one deployment and one design token
- * set (`styles/globals.css`).
+ * Composition only — every section is a marketing feature component. Server
+ * rendered apart from the interactive hero demo, which is the sole client
+ * boundary on the page.
  */
 export default function LandingPage() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-      <div className="space-y-3">
-        <p className="text-sm font-medium uppercase tracking-widest text-accent">
-          {appConfig.name}
-        </p>
-        <h1 className="text-balance text-4xl font-semibold sm:text-5xl">
-          {appConfig.description}
-        </h1>
-        <p className="mx-auto max-w-md text-pretty text-muted">
-          Sign in with a phone number and start talking. No signup step, no
-          passwords.
-        </p>
-      </div>
-
-      <Link
-        href={ROUTES.login}
-        className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
-      >
-        Open the app
-      </Link>
-    </main>
+    <div className="flex min-h-dvh flex-col">
+      <MarketingNav />
+      <main className="flex-1">
+        <Hero />
+        <FeatureShowcase />
+        <ClosingCta />
+      </main>
+      <SiteFooter />
+    </div>
   );
 }
