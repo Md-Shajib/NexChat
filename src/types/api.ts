@@ -30,11 +30,17 @@ export type CursorPage<T> = {
   nextCursor: string | null;
 };
 
-/** The API's error body: `{ error: { message, code, details? } }`. */
+/**
+ * The API's error body: `{ error: { message, code, details? } }`.
+ *
+ * `code` is typed `string | number` deliberately: it is normally a string
+ * (`VALIDATION_ERROR`), but a MongoDB regex-compile failure surfaces the raw
+ * driver code as a **number** (`51091`). See docs/api-documentation.md §8.10.
+ */
 export type ApiErrorBody = {
   error: {
     message: string;
-    code: string;
+    code: string | number;
     details?: Array<{ path: string; message: string }>;
   };
 };

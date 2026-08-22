@@ -30,14 +30,15 @@ export function useCurrentUser() {
     staleTime: 5 * 60_000,
   });
 
-  // Keep the localStorage mirror in step with the server's answer — this is
-  // what corrects the name after a login that reused an existing phone number.
+  // Keep the localStorage mirror in step with the server's answer. The database
+  // is shared and public, so another client can rename an account under us;
+  // /auth/me is authoritative and the cache is only a first-paint optimisation.
   useEffect(() => {
-    if (query.data && query.data.id !== cachedUser?.id) {
-      setUser(query.data);
-      return;
-    }
-    if (query.data && query.data.name !== cachedUser?.name) {
+    if (!query.data) return;
+    if (
+      query.data.id !== cachedUser?.id ||
+      query.data.name !== cachedUser?.name
+    ) {
       setUser(query.data);
     }
   }, [query.data, cachedUser, setUser]);

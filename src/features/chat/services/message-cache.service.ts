@@ -2,6 +2,7 @@ import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/constants/query-keys";
 import type { ChatMessage } from "@/domains/message/message.types";
+import { dedupeById } from "@/domains/message/message.utils";
 import type { CursorPage } from "@/types/api";
 
 export type MessagePages = InfiniteData<CursorPage<ChatMessage>>;
@@ -113,9 +114,11 @@ export function removeMessageFromCache(
 
 /**
  * Flatten paginated history into the chronological list the renderer consumes.
- * Pages are reversed because `pages[0]` holds the newest messages.
+ *
+ * Pages are reversed because `pages[0]` holds the newest messages, and
+ * de-duplicated because the API's `before` cursor is inclusive.
  */
 export function flattenMessages(pages: MessagePages | undefined): ChatMessage[] {
   if (!pages) return [];
-  return [...pages.pages].reverse().flatMap((page) => page.items);
+  return dedupeById([...pages.pages].reverse().flatMap((page) => page.items));
 }

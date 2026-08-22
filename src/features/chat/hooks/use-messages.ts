@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 import { queryKeys } from "@/constants/query-keys";
 import type { ChatMessage } from "@/domains/message/message.types";
+import { dedupeById } from "@/domains/message/message.utils";
 import type { CursorPage } from "@/types/api";
 
 import { getMessages } from "../api/get-messages";
@@ -40,12 +41,15 @@ export function useMessages(conversationId: string | undefined) {
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 
-  /** Oldest → newest across every loaded page. */
+  /**
+   * Oldest → newest across every loaded page.
+   *
+   * De-duplicated because the API's `before` cursor is inclusive, so each page
+   * boundary repeats one message — see `dedupeById`.
+   */
   const messages = useMemo<ChatMessage[]>(() => {
     if (!query.data) return [];
-    return [...query.data.pages]
-      .reverse()
-      .flatMap((page) => page.items);
+    return dedupeById([...query.data.pages].reverse().flatMap((page) => page.items));
   }, [query.data]);
 
   return {

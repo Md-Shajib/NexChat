@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 
 import { appConfig } from "@/config/app-config";
 import { isSendableText } from "@/domains/message/message.utils";
@@ -8,7 +8,6 @@ import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/utils/cn";
 
 type MessageComposerProps = {
-  conversationId: string;
   onSend: (text: string) => void;
   isSending: boolean;
 };
@@ -25,22 +24,17 @@ const MAX_ROWS = 6;
  * Empty and whitespace-only messages are unsendable — the button is disabled
  * and the Enter handler bails. The API would accept them (it returns 200 for
  * `""`), so this is the only thing enforcing the requirement.
+ *
+ * The draft is reset per conversation by the caller keying this component on
+ * `conversationId` — React's own idiom for "reset state when a prop changes",
+ * and cheaper than clearing it from an effect after a render has already
+ * committed with the previous conversation's text.
  */
-export function MessageComposer({
-  conversationId,
-  onSend,
-  isSending,
-}: MessageComposerProps) {
+export function MessageComposer({ onSend, isSending }: MessageComposerProps) {
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const canSend = isSendableText(text) && !isSending;
-
-  // Each conversation keeps its own blank slate, and focus follows navigation.
-  useEffect(() => {
-    setText("");
-    textareaRef.current?.focus();
-  }, [conversationId]);
 
   const autoResize = () => {
     const el = textareaRef.current;
@@ -90,6 +84,7 @@ export function MessageComposer({
         <textarea
           id="composer"
           ref={textareaRef}
+          autoFocus
           rows={1}
           value={text}
           maxLength={appConfig.chat.maxMessageLength}

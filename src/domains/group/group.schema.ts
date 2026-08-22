@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { objectIdSchema } from "@/domains/user/user.schema";
+import { objectIdSchema, userSchema } from "@/domains/user/user.schema";
 
 /**
  * Group business rules, expressed once and reused by every form that touches
@@ -23,3 +23,34 @@ export const groupParticipantIdsSchema = z
     GROUP_MIN_OTHER_PARTICIPANTS,
     `Pick at least ${GROUP_MIN_OTHER_PARTICIPANTS} people`,
   );
+
+/**
+ * The group object returned by `POST /conversations/group` and by every group
+ * mutation (add/remove member, promote, rename).
+ *
+ * It is *nearly* a conversation list item but not quite — it carries
+ * `createdAt` and omits `lastMessage` — which is why it needs its own schema
+ * rather than reusing `conversationSchema`.
+ *
+ * See docs/api-documentation.md §6.6 and §6.9.
+ */
+export const groupDetailSchema = z
+  .object({
+    _id: objectIdSchema,
+    type: z.literal("group"),
+    name: z.string(),
+    createdBy: objectIdSchema,
+    admins: z.array(objectIdSchema),
+    participants: z.array(userSchema),
+    createdAt: z.iso.datetime().optional(),
+    updatedAt: z.iso.datetime(),
+  })
+  .transform((raw) => ({
+    id: raw._id,
+    type: "group" as const,
+    name: raw.name,
+    createdBy: raw.createdBy,
+    admins: raw.admins,
+    members: raw.participants,
+    updatedAt: raw.updatedAt,
+  }));

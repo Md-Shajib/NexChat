@@ -23,12 +23,13 @@ export function useUserSearch(term: string) {
     appConfig.search.debounceMs,
   );
 
-  const isEnabled = debouncedTerm.length >= appConfig.search.minQueryLength;
+  const trimmedTerm = term.trim();
+  const shouldQuery = debouncedTerm.length >= appConfig.search.minQueryLength;
 
   const query = useQuery<User[]>({
     queryKey: queryKeys.users.search(debouncedTerm),
     queryFn: () => searchUsers(debouncedTerm),
-    enabled: isEnabled,
+    enabled: shouldQuery,
     placeholderData: keepPreviousData,
     // Search results are cheap to refetch and go stale quickly as people join.
     staleTime: 15_000,
@@ -40,7 +41,14 @@ export function useUserSearch(term: string) {
   return {
     ...query,
     /** True while the user is typing but the debounce has not fired yet. */
-    isDebouncing: term.trim() !== debouncedTerm,
-    isEnabled,
+    isDebouncing: trimmedTerm !== debouncedTerm,
+    /**
+     * Whether the UI should show results at all.
+     *
+     * Keyed off the *raw* term, not the debounced one, so the list switches to
+     * a loading state on the first keystroke instead of flashing the "search
+     * for someone" prompt until the debounce fires.
+     */
+    isEnabled: trimmedTerm.length >= appConfig.search.minQueryLength,
   };
 }

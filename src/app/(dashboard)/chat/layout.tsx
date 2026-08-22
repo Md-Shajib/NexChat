@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { ChatSocketBoundary } from "@/features/chat";
 import { ConversationSidebar } from "@/features/conversation";
 
+import { ChatModals } from "./chat-modals";
+
 /**
  * The chat shell.
  *
@@ -20,6 +22,8 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
         <ConversationSidebar />
         {children}
       </div>
+
+      <ChatModals />
     </ChatSocketBoundary>
   );
 }

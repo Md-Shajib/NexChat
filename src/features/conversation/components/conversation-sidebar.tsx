@@ -6,12 +6,15 @@ import { useMemo } from "react";
 import { getConversationTitle } from "@/domains/conversation/conversation.utils";
 import { EmptyState } from "@/shared/components/empty-state";
 import { ErrorState } from "@/shared/components/error-state";
+import { IconSearch } from "@/shared/icons";
+import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Input } from "@/shared/ui/input";
 
 import { useConversations } from "../hooks/use-conversations";
 import { useConversationUiStore } from "../store/conversation-ui.store";
 import { ConversationListItem } from "./conversation-list-item";
+import { SidebarHeader } from "./sidebar-header";
 
 /**
  * The conversation list.
@@ -26,6 +29,7 @@ export function ConversationSidebar() {
   const { data, isLoading, isError, error, refetch } = useConversations();
   const listFilter = useConversationUiStore((state) => state.listFilter);
   const setListFilter = useConversationUiStore((state) => state.setListFilter);
+  const openModal = useConversationUiStore((state) => state.openModal);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -38,14 +42,20 @@ export function ConversationSidebar() {
 
   return (
     <aside className="flex w-full flex-col border-border bg-surface md:w-80 md:border-r">
+      <SidebarHeader />
+
       <div className="border-b border-border p-3">
-        <Input
-          type="search"
-          placeholder="Search your chats"
-          aria-label="Filter conversations"
-          value={listFilter}
-          onChange={(event) => setListFilter(event.target.value)}
-        />
+        <div className="relative">
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+          <Input
+            type="search"
+            placeholder="Search your chats"
+            aria-label="Filter conversations"
+            value={listFilter}
+            onChange={(event) => setListFilter(event.target.value)}
+            className="pl-9"
+          />
+        </div>
       </div>
 
       <div className="scrollbar-thin flex-1 overflow-y-auto">
@@ -74,6 +84,17 @@ export function ConversationSidebar() {
               listFilter
                 ? "Try a different name."
                 : "Search for someone by name or number to start talking."
+            }
+            action={
+              listFilter ? undefined : (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => openModal("new-conversation")}
+                >
+                  Start a conversation
+                </Button>
+              )
             }
           />
         ) : (

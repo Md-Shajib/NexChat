@@ -114,8 +114,10 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
         onRetryLoad={() => void refetch()}
       />
 
+      {/* Keyed on the conversation so switching chats resets the draft and
+          refocuses the input, without an effect reaching in to clear state. */}
       <MessageComposer
-        conversationId={conversationId}
+        key={conversationId}
         isSending={sendMessage.isPending}
         onSend={(text) => sendMessage.mutate({ conversationId, text })}
       />

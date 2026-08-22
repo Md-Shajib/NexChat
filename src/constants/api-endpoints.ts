@@ -25,7 +25,14 @@ export const API_ENDPOINTS = {
   messages: {
     send: "/messages",
   },
-  system: {
-    health: "/health",
-  },
 } as const;
+
+/**
+ * `/health` is documented under the `/api` base but is actually served from the
+ * host **root** — `GET /api/health` returns `404 NOT_FOUND`. It therefore lives
+ * here rather than in `API_ENDPOINTS`, which is relative to the REST base.
+ *
+ * Useful for warming the free-tier dyno before the user reaches login.
+ * See docs/api-documentation.md §6.10.
+ */
+export const HEALTH_URL = "/health" as const;

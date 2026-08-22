@@ -21,6 +21,28 @@ export function toChronological<T extends { createdAt: string }>(
 }
 
 /**
+ * Drop duplicate messages, keeping the first occurrence.
+ *
+ * QUIRK: the history endpoint's `before` cursor is **inclusive** — requesting
+ * `?before=<id>` returns `<id>` again as the first item of the next page. So
+ * every page boundary repeats exactly one message unless we collapse it here.
+ *
+ * See docs/api-documentation.md §8.2.
+ */
+export function dedupeById<T extends { id: string }>(messages: readonly T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+
+  for (const message of messages) {
+    if (seen.has(message.id)) continue;
+    seen.add(message.id);
+    result.push(message);
+  }
+
+  return result;
+}
+
+/**
  * Merge a message into a list, de-duplicating by id.
  *
  * Necessary because a message we sent over REST also comes back over the

@@ -77,6 +77,20 @@ function isApiErrorBody(value: unknown): value is ApiErrorBody {
   );
 }
 
+/**
+ * Coerce the wire `code` to our union.
+ *
+ * The API returns a numeric MongoDB code (`51091`) for regex-compile failures,
+ * so anything that is not one of our known string codes collapses to `unknown`
+ * rather than being trusted as an `ApiErrorCode`.
+ */
+function normaliseCode(code: string | number | undefined): ApiErrorCode {
+  if (typeof code !== "string") return API_ERROR_CODES.unknown;
+
+  const known = Object.values(API_ERROR_CODES) as string[];
+  return known.includes(code) ? (code as ApiErrorCode) : API_ERROR_CODES.unknown;
+}
+
 /** Convert anything thrown inside the api layer into an `ApiError`. */
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
@@ -88,7 +102,7 @@ export function toApiError(error: unknown): ApiError {
     if (isApiErrorBody(body)) {
       return new ApiError({
         message: body.error.message,
-        code: (body.error.code as ApiErrorCode) ?? API_ERROR_CODES.unknown,
+        code: normaliseCode(body.error.code),
         status,
         details: body.error.details,
         cause: error,
